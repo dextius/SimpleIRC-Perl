@@ -4,7 +4,6 @@ use strict;
 use Data::Dumper;
 use IO::Socket::INET;
 use IO::Select;
-use Time::HiRes qw(ualarm);
 
 $| = 1;
 

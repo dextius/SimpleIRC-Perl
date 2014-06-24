@@ -2,9 +2,17 @@
 
 use strict;
 use Data::Dumper;
+use Getopt::Long;
 use IO::Socket::INET;
 use IO::Select;
 use POSIX qw(strftime);
+
+my ( $hb, $lmt );
+my $result = GetOptions(
+    "hb"    => \$hb,
+    "lmt=i" => \$lmt,
+);
+my $hbs_sent = 0;
 
 $| = 1; # disable buffering
 
@@ -39,6 +47,7 @@ sub publish {
     my $date = strftime("%H:%M/%S", localtime);
     foreach my $sock ( $sel->handles() ) {
         next if ( $sock == $listen );                                  # don't send to the listen socket!
+        next if ( $sock == $logged_in{$sock} );
         $sock->send(sprintf("%s - %10s: %s\n", $date, $sender, $msg)); # write out our message to friends
     }
 }
@@ -68,6 +77,18 @@ while ( 1 ) {
                         warn "Error: $@, data=|$data|\n" if ( $@ );
                     }
                 }
+            }
+        }
+    }
+    if ( $hb ) {
+        $hbs_sent++;
+        if ( ! $lmt || ( $hbs_sent < $lmt ) ) {
+            foreach my $sock ( $sel->handles() ) {
+                next if ( $sock == $listen );
+                next if ( $sock == $logged_in{$sock} );
+
+                my $time = time();
+                $sock->send(qq({"date" : "$time"}\n));
             }
         }
     }
